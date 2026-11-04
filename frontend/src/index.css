@@ -1,0 +1,409 @@
+@import "tailwindcss";
+
+/*
+  Design tokens.
+  The token NAMES (navy, brand, accent...) are unchanged so every existing page,
+  including the admin area, picks up the new look automatically.
+  "navy" is now the deep forest green from the reference templates.
+*/
+@theme {
+  /* Cookie palette: dark chocolate, caramel, biscuit gold and cream. */
+  --color-navy: #3b2417;
+  --color-navy-2: #52331f;
+  --color-brand: #c2762b;
+  --color-brand-dark: #a85f1c;
+  --color-accent: #f2b84b;
+  --color-accent-soft: #fdf0d2;
+  --color-sky: #b8691f;
+  --color-surface: #fbf5ec;
+  --color-ink: #2b1d14;
+  --color-muted: #7a6554;
+  --color-line: #eadcc8;
+  --color-sand: #f4e8d4;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Serif headlines on the public site only (the admin area keeps the sans). */
+.public-shell :is(h1, h2) {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+@layer components {
+  .page { @apply mx-auto w-full max-w-[1920px] px-4 sm:px-8 xl:px-14 2xl:px-20; }
+  .card { @apply bg-white rounded-2xl border border-line shadow-[0_1px_2px_rgba(15,59,49,0.06)]; }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-navy transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-line bg-white px-5 py-2.5 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand-dark disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-white/35 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50;
+  }
+  .btn-sm {
+    @apply inline-flex items-center justify-center rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-brand hover:text-brand-dark;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-brand/20;
+  }
+  .label { @apply mb-1 block text-xs font-semibold text-muted; }
+  .badge { @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium; }
+  .h-section { @apply text-3xl font-semibold tracking-tight text-navy sm:text-4xl; }
+}
+
+.leaflet-container {
+  isolation: isolate;
+  height: 100%;
+  width: 100%;
+  border-radius: 1rem;
+}
+
+/* Dark forest banner used by inner-page headers, the admin sidebar and CTA blocks. */
+.hero-bg {
+  background:
+    radial-gradient(48rem 24rem at 90% -20%, rgba(240, 146, 43, 0.22), transparent 60%),
+    radial-gradient(40rem 22rem at 0% 120%, rgba(30, 122, 94, 0.55), transparent 60%),
+    linear-gradient(135deg, #0f4c3a 0%, #0369a1 100%);
+}
+
+/* The one orchestrated moment: hero destination cards fan out once on load. */
+.fan-card {
+  transform: var(--t);
+  animation: fan-in 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: var(--d, 0s);
+}
+@keyframes fan-in {
+  from { opacity: 0; transform: translateY(28px) rotate(0deg) scale(0.96); }
+  to   { opacity: 1; transform: var(--t); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fan-card { animation: none; }
+  html { scroll-behavior: auto; }
+}
+
+/* Auto-scrolling hero banner */
+.hero-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1.4s ease-in-out; }
+.hero-slide.is-active { opacity: 1; }
+.hero-slide.is-active img { animation: hero-zoom 9s ease-out forwards; }
+@keyframes hero-zoom { from { transform: scale(1); } to { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) {
+  .hero-slide { transition: none; }
+  .hero-slide.is-active img { animation: none; }
+}
+
+/* Print / save-as-PDF: hide site chrome so only the plan is printed. */
+@media print {
+  header, footer, .fixed, button, .chat-widget, .scroll-progress { display: none !important; }
+  body { background: #fff; }
+}
+
+/* =====================================================================
+   Motion + polish layer
+   ===================================================================== */
+
+/* Scroll reveal: elements fade and rise as they enter the screen (see hooks/useAutoReveal.js).
+   Content is only hidden once the script has marked it, so nothing stays invisible without JS. */
+.reveal {
+  opacity: 0;
+  transform: translateY(34px);
+  transition: opacity 0.8s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: var(--rd, 0ms);
+}
+.reveal.is-in { opacity: 1; transform: none; }
+
+/* Re-played whenever a results list changes (stagger with --i). */
+.rise { animation: rise-in 0.65s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 70ms); }
+@keyframes rise-in { from { opacity: 0; transform: translateY(26px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+/* Bars grow up from the baseline. */
+.grow-y { transform-origin: bottom; animation: grow-y 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 45ms); }
+@keyframes grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+/* Page progress bar under the navbar. */
+.scroll-progress {
+  position: fixed; inset: 0 0 auto 0; z-index: 1100; height: 3px; transform-origin: 0 50%;
+  background: linear-gradient(90deg, var(--color-accent), #fde68a); transform: scaleX(0); pointer-events: none;
+}
+
+/* Navbar gets a soft shadow once the page scrolls. */
+.nav-scrolled { box-shadow: 0 10px 30px rgba(6, 28, 22, 0.28); }
+
+/* Buttons lift on hover, cards float. */
+.btn-primary:not(:disabled), .btn-accent:not(:disabled), .btn-outline:not(:disabled), .btn-ghost {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, filter 0.2s ease;
+}
+.btn-primary:not(:disabled):hover, .btn-accent:not(:disabled):hover, .btn-outline:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(15, 59, 49, 0.18);
+}
+.btn-primary:not(:disabled):active, .btn-accent:not(:disabled):active, .btn-outline:not(:disabled):active { transform: translateY(0); }
+.card { transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease; }
+a.card:hover, .card-lift:hover { transform: translateY(-4px); box-shadow: 0 18px 40px rgba(15, 59, 49, 0.14); border-color: #cfd8cf; }
+
+/* Section headings get a small accent rule. */
+.eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-brand); }
+.eyebrow::before { content: ""; width: 1.75rem; height: 2px; border-radius: 2px; background: var(--color-accent); }
+
+/* Season score ring */
+.ring-fill { transition: stroke-dashoffset 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) 0.15s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .rise, .grow-y { animation: none; transition: none; opacity: 1; transform: none; }
+  .ring-fill { transition: none; }
+  .scroll-progress { display: none; }
+}
+
+/* ExploreSouth responsive refinement */
+:root { color-scheme: light; }
+body { min-width: 320px; }
+button, input, select, textarea { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+img { max-width: 100%; }
+::selection { background: rgba(240, 146, 43, .25); color: #0f4c3a; }
+
+.public-shell { overflow-x: clip; }
+.public-shell main { min-width: 0; }
+.public-shell section { scroll-margin-top: 6rem; }
+.public-shell .card { border-radius: 1.35rem; }
+.public-shell .input { min-height: 2.9rem; border-radius: .85rem; }
+.public-shell .label { font-size: .76rem; letter-spacing: .01em; }
+.public-shell .btn-primary, .public-shell .btn-accent, .public-shell .btn-outline { min-height: 2.75rem; }
+
+.budget-hero { position: relative; isolation: isolate; overflow: hidden; }
+.budget-hero::after { content: ""; position: absolute; z-index: -1; width: 22rem; height: 22rem; right: -5rem; bottom: -15rem; border: 1px solid rgba(255,255,255,.14); border-radius: 50%; box-shadow: 0 0 0 2rem rgba(255,255,255,.025), 0 0 0 4rem rgba(255,255,255,.02), 0 0 0 6rem rgba(255,255,255,.015); }
+.budget-workspace { position: relative; }
+.budget-panel { box-shadow: 0 8px 28px rgba(15,59,49,.055); }
+.budget-field { position: relative; display: block; min-width: 0; }
+.budget-field .input { padding-left: 2.6rem; }
+.field-icon { position: absolute; left: .85rem; bottom: .83rem; z-index: 1; display: inline-flex; color: #789087; pointer-events: none; }
+.destination-recommendation { display: block; transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+.destination-recommendation:hover { transform: translateY(-5px); border-color: #b9cfc3; box-shadow: 0 18px 42px rgba(15,59,49,.13); }
+
+/* More reliable touch and tablet layouts */
+@media (max-width: 1279px) {
+  .public-shell header nav.page { min-height: 60px; }
+}
+@media (max-width: 767px) {
+  .page { padding-left: 1rem; padding-right: 1rem; }
+  .public-shell .h-section { font-size: 1.8rem; line-height: 1.2; }
+  .budget-hero .page { padding-top: 2.5rem; padding-bottom: 2.5rem; }
+  .budget-panel { border-radius: 1.15rem; }
+  .budget-panel .input { min-height: 2.8rem; font-size: 16px; }
+  .budget-field .field-icon { bottom: .8rem; }
+  .destination-recommendation:hover { transform: none; }
+  .public-shell footer .page { padding-top: 2rem; }
+}
+@media (max-width: 380px) {
+  .budget-workspace .grid-cols-2 { gap: .6rem; }
+  .budget-workspace .text-xl { font-size: 1.05rem; }
+  .budget-workspace .budget-panel .p-4 { padding: .85rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+/* Navigation and content rhythm */
+.public-shell header { box-shadow: 0 1px 0 rgba(255,255,255,.06); }
+.public-shell header nav { gap: clamp(.5rem, 1.2vw, 1.25rem); }
+.public-shell header nav > a:first-child img { max-height: 3.1rem; }
+.public-shell footer a:focus-visible, .public-shell nav a:focus-visible { border-radius: .5rem; }
+@media (max-width: 639px) {
+  .public-shell header nav > a:first-child img { max-height: 2.7rem; }
+  .public-shell .chat-widget > button { right: 1rem; bottom: 1rem; }
+}
+/* Phones: the floating bottom nav sits at the bottom, so lift the chat button above it. */
+@media (max-width: 767px) {
+  .public-shell .chat-widget > button { right: 1rem; bottom: 5.5rem; }
+}
+
+
+/* Hero stacking fix: keep the photo and overlay behind readable hero content. */
+.public-shell main > section:first-of-type:is(.relative) { isolation: isolate; }
+.public-shell main > section:first-of-type:is(.relative) > .page { position: relative; z-index: 10; }
+.public-shell main > section:first-of-type:is(.relative) > .pointer-events-none { z-index: 0; }
+@media (max-width: 639px) {
+  .public-shell main > section:first-of-type:is(.relative) > .page { padding-top: 1.5rem; padding-bottom: 4.75rem; }
+}
+
+/* =====================================================================
+   Professional layer (US-style): neutral surfaces, Inter, tighter radii,
+   quieter shadows, solid dark banners. Overrides the earlier decorative styles.
+   ===================================================================== */
+:root {
+  --color-surface: #f6f8f9;
+  --color-line: #e2e8ec;
+  --color-ink: #111827;
+  --color-muted: #5b6672;
+  --font-sans: "Inter", "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-display: var(--font-sans);
+}
+body { background: var(--color-surface); font-family: var(--font-sans); font-feature-settings: "cv11", "ss01"; }
+
+/* Headlines: bold sans instead of the decorative serif. */
+.public-shell :is(h1, h2) { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0.025em; }
+.public-shell h1 { line-height: 1.08; }
+.font-display { font-family: var(--font-sans) !important; }
+
+/* Cards, fields and buttons: 12px / 10px radii, hairline borders, soft shadow. */
+.public-shell .card { border-radius: 12px; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.04); }
+.public-shell a.card:hover, .public-shell .card-lift:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(16, 24, 40, 0.10); border-color: #cfd8df; }
+.public-shell .input { border-radius: 10px; border-color: #d5dde3; background: #fff; }
+.public-shell .input:focus { border-color: var(--color-brand); box-shadow: 0 0 0 3px rgba(30, 122, 94, 0.15); outline: none; }
+.public-shell :is(.btn-primary, .btn-accent, .btn-outline, .btn-ghost) { border-radius: 10px; font-weight: 600; letter-spacing: -0.005em; }
+.public-shell .btn-accent { box-shadow: 0 1px 2px rgba(16, 24, 40, 0.12); }
+.public-shell [class*="rounded-3xl"] { border-radius: 16px; }
+.public-shell [class*="rounded-2xl"] { border-radius: 12px; }
+.badge { border-radius: 6px; }
+
+/* Inner page banners: solid, calm, with a thin accent rule instead of glow blobs. */
+.hero-bg { background: linear-gradient(180deg, #0b2a23 0%, #0f3a30 100%); border-bottom: 3px solid var(--color-accent); }
+
+/* Consistent reading width and rhythm on content pages. */
+.public-shell main > section { scroll-margin-top: 5rem; }
+.public-shell p { text-wrap: pretty; }
+
+/* Navbar: thinner and more compact so 9 links fit comfortably. */
+.public-shell header nav a { font-size: 0.875rem; }
+
+/* Attractions rows: stronger hierarchy for name, fee and timings. */
+.public-shell .card h3 { letter-spacing: -0.01em; }
+
+/* Footer: flat, four tidy columns with small-caps headings. */
+.public-shell footer .font-display { font-family: var(--font-sans); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.9); }
+.public-shell footer ul { margin-top: 0.25rem; }
+
+/* Floating "Ask us" button: smaller and less dominant. */
+.chat-widget button[aria-label], .chat-widget > button { box-shadow: 0 8px 24px rgba(16, 24, 40, 0.25); }
+
+/* ===== Theme: yellow, green, blue, white, black ===== */
+:root { --color-surface: #f8faf9; --color-line: #e5e7eb; --color-ink: #0f1412; }
+:focus-visible { outline: 2px solid var(--color-sky); outline-offset: 2px; }
+.hero-bg { background: linear-gradient(135deg, #0f4c3a 0%, #0369a1 100%); border-bottom: 3px solid var(--color-accent); }
+.eyebrow { color: var(--color-brand-dark); }
+.public-shell .input:focus { border-color: var(--color-sky); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+.public-shell a.card:hover, .public-shell .card-lift:hover { border-color: #bfdbfe; }
+.btn-primary:not(:disabled):hover { background: var(--color-brand); }
+.auth-art {
+  background:
+    radial-gradient(40rem 26rem at 100% 0%, rgba(250, 204, 21, 0.28), transparent 60%),
+    radial-gradient(36rem 26rem at 0% 100%, rgba(37, 99, 235, 0.45), transparent 60%),
+    linear-gradient(160deg, #0f4c3a 0%, #14532d 100%);
+}
+
+/* ===== Natural theme: sky, leaf green, sunshine yellow, white ===== */
+:root { --color-surface: #f2faf6; --color-line: #d9e8df; --color-ink: #12221b; }
+:focus-visible { outline: 2px solid var(--color-sky); outline-offset: 2px; }
+.hero-bg {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1440 320%22 preserveAspectRatio=%22xMidYMax slice%22%3E%3Ccircle cx=%221180%22 cy=%2290%22 r=%2246%22 fill=%22%23fde047%22 opacity=%22.95%22/%3E%3Ccircle cx=%221180%22 cy=%2290%22 r=%2278%22 fill=%22%23fde047%22 opacity=%22.18%22/%3E%3Cg fill=%22%23fff%22 opacity=%22.35%22%3E%3Cellipse cx=%22300%22 cy=%2270%22 rx=%2290%22 ry=%2216%22/%3E%3Cellipse cx=%22350%22 cy=%2256%22 rx=%2260%22 ry=%2214%22/%3E%3Cellipse cx=%22820%22 cy=%22110%22 rx=%22110%22 ry=%2214%22/%3E%3Cellipse cx=%22880%22 cy=%2296%22 rx=%2264%22 ry=%2212%22/%3E%3C/g%3E%3Cpath d=%22M0 250 Q180 150 380 210 T760 190 T1100 200 T1440 170 V320 H0Z%22 fill=%22%234ade80%22 opacity=%22.55%22/%3E%3Cpath d=%22M0 275 Q220 200 460 250 T900 235 T1440 245 V320 H0Z%22 fill=%22%2322c55e%22 opacity=%22.8%22/%3E%3Cpath d=%22M0 300 Q300 255 620 285 T1200 280 T1440 290 V320 H0Z%22 fill=%22%2315803d%22/%3E%3C/svg%3E"), linear-gradient(180deg, #0369a1 0%, #0ea5e9 55%, #7dd3fc 100%);
+  background-repeat: no-repeat; background-position: bottom center, center; background-size: 100% auto, cover;
+  border-bottom: 0; position: relative;
+}
+.hero-bg > .page { position: relative; z-index: 1; padding-bottom: 4rem; }
+@media (max-width: 639px) { .hero-bg > .page { padding-bottom: 2.75rem; } }
+.public-shell input:focus, .public-shell select:focus, .public-shell textarea:focus { border-color: var(--color-sky); box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.18); }
+.auth-art {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1440 320%22 preserveAspectRatio=%22xMidYMax slice%22%3E%3Ccircle cx=%221180%22 cy=%2290%22 r=%2246%22 fill=%22%23fde047%22 opacity=%22.95%22/%3E%3Ccircle cx=%221180%22 cy=%2290%22 r=%2278%22 fill=%22%23fde047%22 opacity=%22.18%22/%3E%3Cg fill=%22%23fff%22 opacity=%22.35%22%3E%3Cellipse cx=%22300%22 cy=%2270%22 rx=%2290%22 ry=%2216%22/%3E%3Cellipse cx=%22350%22 cy=%2256%22 rx=%2260%22 ry=%2214%22/%3E%3Cellipse cx=%22820%22 cy=%22110%22 rx=%22110%22 ry=%2214%22/%3E%3Cellipse cx=%22880%22 cy=%2296%22 rx=%2264%22 ry=%2212%22/%3E%3C/g%3E%3Cpath d=%22M0 250 Q180 150 380 210 T760 190 T1100 200 T1440 170 V320 H0Z%22 fill=%22%234ade80%22 opacity=%22.55%22/%3E%3Cpath d=%22M0 275 Q220 200 460 250 T900 235 T1440 245 V320 H0Z%22 fill=%22%2322c55e%22 opacity=%22.8%22/%3E%3Cpath d=%22M0 300 Q300 255 620 285 T1200 280 T1440 290 V320 H0Z%22 fill=%22%2315803d%22/%3E%3C/svg%3E"), linear-gradient(170deg, #0369a1 0%, #0ea5e9 45%, #86efac 100%);
+  background-repeat: no-repeat; background-position: bottom center, center; background-size: 100% auto, cover;
+}
+
+/* Home hero: keep white text readable on the photo without tinting it. */
+.public-shell section.isolate h1, .public-shell section.isolate > .page p { text-shadow: 0 2px 14px rgba(0, 0, 0, 0.45); }
+
+
+/* Hide scrollbars on sideways-scrolling rows (still scrollable by touch, wheel and keyboard). */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Mobile menu drawer */
+.drawer-overlay { animation: drawer-fade 0.25s ease both; }
+.drawer-panel { animation: drawer-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes drawer-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes drawer-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+
+/* =====================================================================
+   Cookie theme (final override layer)
+   ===================================================================== */
+:root {
+  --color-surface: #fbf5ec;
+  --color-line: #eadcc8;
+  --color-ink: #2b1d14;
+  --color-muted: #7a6554;
+}
+:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+::selection { background: rgba(242, 184, 75, .35); color: #3b2417; }
+.nav-scrolled { box-shadow: 0 10px 30px rgba(43, 24, 12, 0.30); }
+.eyebrow { color: var(--color-brand-dark); }
+.hero-bg, .auth-art {
+  background-image: radial-gradient(34rem 20rem at 100% 0%, rgba(242, 184, 75, .30), transparent 60%),
+                    radial-gradient(30rem 20rem at 0% 100%, rgba(194, 118, 43, .35), transparent 60%),
+                    linear-gradient(160deg, #3b2417 0%, #5a3a24 100%);
+  background-repeat: no-repeat; background-position: center; background-size: cover;
+  border-bottom: 3px solid var(--color-accent);
+}
+.public-shell input:focus, .public-shell select:focus, .public-shell textarea:focus,
+.public-shell .input:focus { border-color: var(--color-brand); box-shadow: 0 0 0 3px rgba(194, 118, 43, 0.18); }
+.public-shell a.card:hover, .public-shell .card-lift:hover { border-color: #e2c8a3; box-shadow: 0 12px 28px rgba(59, 36, 23, 0.12); }
+.public-shell .card { box-shadow: 0 1px 2px rgba(59, 36, 23, 0.06); }
+.budget-panel { box-shadow: 0 8px 28px rgba(59, 36, 23, .07); }
+.destination-recommendation:hover { border-color: #dcbf95; box-shadow: 0 18px 42px rgba(59, 36, 23, .13); }
+.field-icon { color: #a8896d; }
+.scroll-progress { background: linear-gradient(90deg, var(--color-brand), var(--color-accent)); }
+
+
+/* Destination cards: keep the hover lift after the entrance animation ends, plus a light shine sweep. */
+.dest-card.rise { animation-fill-mode: backwards; }
+.dest-shine { position: absolute; inset: 0; background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.28) 50%, transparent 65%); transform: translateX(-120%); transition: transform .8s ease; pointer-events: none; }
+.dest-card:hover .dest-shine { transform: translateX(120%); }
+
+/* "Explore by state": cards drift sideways on their own, pause on hover or touch. */
+.marquee { overflow: hidden; -webkit-mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent); mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent); }
+.marquee-track { display: flex; width: max-content; gap: 1rem; padding: .5rem 0 .75rem 1rem; animation: marquee-move 40s linear infinite; }
+.marquee:hover .marquee-track, .marquee:active .marquee-track, .marquee:focus-within .marquee-track { animation-play-state: paused; }
+@keyframes marquee-move { to { transform: translateX(-50%); } }
+.state-card { transition: transform .35s ease, box-shadow .35s ease; }
+.state-card:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 18px 34px rgba(59, 36, 23, .32); }
+.state-glow { background: radial-gradient(14rem 8rem at 85% 0%, rgba(255,255,255,.22), transparent 70%); opacity: .7; transition: opacity .4s; }
+.state-card:hover .state-glow { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .marquee { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
+  .marquee-track { animation: none; }
+  .dest-shine { display: none; }
+}
+
+/* Mobile drawer: if the animation cannot run the panel simply appears. */
+.drawer-panel { animation: drawer-in .26s cubic-bezier(.2,.8,.2,1) backwards; }
+.drawer-overlay { animation: drawer-fade .2s ease backwards; }
+
+/* Admin phone drawer slides in from the left. */
+.drawer-left { animation: drawer-in-left .26s cubic-bezier(.2,.8,.2,1) backwards; }
+@keyframes drawer-in-left { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+
+/* Chat box: the rounded pill already shows the focus ring, so drop the square outline on the input itself. */
+#chat-input, #chat-input:focus, #chat-input:focus-visible { outline: none !important; box-shadow: none !important; border-color: transparent !important; }

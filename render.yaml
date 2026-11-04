@@ -1,0 +1,45 @@
+# Render Blueprint: creates the Django API and its PostgreSQL database.
+# The frontend is deployed separately on Vercel (see DEPLOY.md).
+databases:
+  - name: exploresouth-db
+    plan: free
+    databaseName: exploresouth
+    user: exploresouth
+
+services:
+  - type: web
+    name: exploresouth-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: >-
+      pip install -r requirements.txt &&
+      python manage.py collectstatic --no-input &&
+      python manage.py makemigrations users destinations attractions reviews favorites itineraries expenses bookings contact --no-input &&
+      python manage.py migrate --no-input
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 90
+    healthCheckPath: /api/states/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: exploresouth-db
+          property: connectionString
+      # Fill these in on the Render dashboard (they are not stored in Git):
+      - key: CORS_ALLOWED_ORIGINS      # your Vercel address, e.g. https://exploresouth.vercel.app
+        sync: false
+      - key: SITE_URL                  # same Vercel address; used for the buttons in emails
+        sync: false
+      - key: CLOUDINARY_URL            # permanent photo storage
+        sync: false
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: CONTACT_RECEIVER_EMAIL
+        sync: false
