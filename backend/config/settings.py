@@ -148,8 +148,9 @@ REST_FRAMEWORK = {
 }
 
 # ---- Email (Contact us page and booking confirmations) ----
-# On Render's free plan, outgoing SMTP (Gmail) is blocked, so use Resend (HTTPS):
-#   set RESEND_API_KEY in the environment and emails go out through config/resend_backend.py.
+# On Render's free plan, outgoing SMTP (Gmail) is blocked, so use Mailjet (HTTPS):
+#   set MAILJET_API_KEY, MAILJET_SECRET_KEY and MAIL_FROM_EMAIL in the environment and emails go out
+#   through config/mailjet_backend.py. MAIL_FROM_EMAIL must be a sender verified in Mailjet.
 # Otherwise, if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD are set (Gmail App Password), SMTP is used.
 # With neither, emails are only printed in the server console.
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
@@ -159,14 +160,13 @@ EMAIL_TIMEOUT = 10  # never let a slow mail server hang the request
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-# The default sender only delivers to the email you signed up to Resend with.
-# To email customers, verify your own domain in Resend and set RESEND_FROM, e.g.
-# "ExploreSouth <bookings@yourdomain.com>".
-RESEND_FROM = os.environ.get("RESEND_FROM", "ExploreSouth <onboarding@resend.dev>")
+MAILJET_API_KEY = os.environ.get("MAILJET_API_KEY", "")
+MAILJET_SECRET_KEY = os.environ.get("MAILJET_SECRET_KEY", "")
+MAIL_FROM_EMAIL = os.environ.get("MAIL_FROM_EMAIL", EMAIL_HOST_USER)  # must be verified in Mailjet
+MAIL_FROM_NAME = os.environ.get("MAIL_FROM_NAME", "ExploreSouth")
 
-if RESEND_API_KEY:
-    EMAIL_BACKEND = "config.resend_backend.ResendEmailBackend"
+if MAILJET_API_KEY and MAILJET_SECRET_KEY and MAIL_FROM_EMAIL:
+    EMAIL_BACKEND = "config.mailjet_backend.MailjetEmailBackend"
     EMAIL_DELIVERY_READY = True
 elif EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -175,7 +175,7 @@ else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
     EMAIL_DELIVERY_READY = False  # emails only print to the console
 
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or "noreply@exploresouth.local"
+DEFAULT_FROM_EMAIL = MAIL_FROM_EMAIL or EMAIL_HOST_USER or "noreply@exploresouth.local"
 CONTACT_RECEIVER_EMAIL = os.environ.get("CONTACT_RECEIVER_EMAIL", "nikildanniki@gmail.com")
 # Public address of the website, used for the buttons in emails.
 SITE_URL = os.environ.get("SITE_URL", "http://localhost:5173")
